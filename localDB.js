@@ -68,9 +68,9 @@ Collection.prototype.doc = function (id) {
       res._id = id
       return res
     },
-    update: (val) => {
-      if (typeof val != 'object') return false
-      _update(data, val)
+    update: (newVal) => {
+      if (typeof newVal != 'object') return false
+      _update(data, newVal)
       _writeBack()
       return true
     },
@@ -119,13 +119,23 @@ Collection.prototype.skip = function (skip) {
 }
 /**
  * 指定查询排序条件
- * @param {string} field 排序字段
- * @param {string} order 升序或降序
+ * @param {String} field 排序字段
+ * @param {('asc'|'desc')} order 升序或降序
  */
 Collection.prototype.orderBy = function (field, order) {
   this._field = field
   this._order = order || 'asc'
   return this
+}
+/**
+ * 统计匹配查询条件的记录的条数
+ * @returns {Number} 记录的条数
+ */
+Collection.prototype.count = function () {
+  var count = 0
+  for(var key in this.data)
+    if(this.data[key]) count++
+  return count
 }
 /**
  * 获取集合数据
@@ -157,12 +167,12 @@ Collection.prototype.get = function () {
 }
 /**
  * 更新多条记录
- * @param {Object} val 更新内容
+ * @param {Object} newVal 更新内容
  */
-Collection.prototype.update = function (val) {
-  if (typeof val != 'object') return false
+Collection.prototype.update = function (newVal) {
+  if (typeof newVal != 'object') return false
   for (var key in this.data)
-    _update(this.data[key], val)
+    _update(this.data[key], newVal)
   _writeBack()
   return true
 }
@@ -246,7 +256,7 @@ module.exports = {
     nin: query => new Command(val => !query.includes(val)),
     exists: query => new Command(val => val == void 0 ? !query : query),
     // 更新指令
-    set: val => val,
+    set: val => JSON.parse(JSON.stringify(val)),
     remove: () => void 0,
     inc: diff => (val => val += diff),
     mul: diff => (val => val *= diff),
