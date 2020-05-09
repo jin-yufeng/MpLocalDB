@@ -3,7 +3,7 @@
 > 微信小程序本地数据库
 
 ## 使用方法 ##
-1. 复制 `localDB.js`（`6.70KB`，`min` 版本 `3.97KB`）到 `utils` 目录下
+1. 复制 `localDB.js`（`6.98KB`，`min` 版本 `4.09KB`）到 `utils` 目录下
 2. 在需要使用的页面的 `js` 文件中添加  
 
    ```javascript
@@ -11,59 +11,43 @@
    const _ = localDB.command
    ```
 
-例程一：增删改查
+## 示例程序 ##
 ```javascript
+const localDB = require('utils/localDB.js')
+const _ = localDB.command
 localDB.init() // 初始化
-var collection = localDB.collection('test')
-if(!collection) {
-  collection = localDB.createCollection('test')
-  console.log('创建一张名为 test 的表', collection)
-  for (var i = 0; i < 100; i++) {
-    // 增加
-    collection.add({
-      xxx: i,
-      yyy: [i],
-      zzz: i % 2 ? 'aa' : 'bb'
-    })
-  }
-  console.log('插入 100 条随机数据', collection.get())
+var articles = localDB.collection('articles')
+if(!articles)
+  articles = localDB.createCollection('articles') // 不存在则先创建
+// 按文章 id 查找
+var doc = articles.doc('xxx')
+if(doc) {
+  var data = doc.get() // 取得数据
+} else {
+  // 网络请求获取 data
+  data._timeout = Date.now() + 15 * 24 * 3600000 // 设置过期时间为 15 天
+  articles.add(data) // 添加到本地数据库
 }
-// 查询
-console.log('查询 xxx 在 10-20 之间的数据', collection.where({
-  xxx: _.gte(10).and(_.lte(20))
-}).get())
-console.log('正则查询 zzz: /a+/', collection.where({
-  zzz: /a+/
-}).get())
-console.log('结果降序排序', collection.orderBy('xxx', 'desc').get())
-// 修改
-collection.update({
-  yyy: _.push(100)
-})
-console.log('更新数据 yyy 增加一个 100', collection.get())
-// 删除
-collection.where({
-  xxx: _.gte(50)
+// 按类型查找
+var data = articles.where({
+  type: 'xxx'
+}).get()
+// 正则查找
+var data = articles.where({
+  title: /xxx/ // 标题中含有 xxx 的
+}).get()
+// 分页查找
+var page2 = articles.skip(10).limit(10).get()
+// 按时间查找
+var data = articles.where({
+  date: _.gte('20200501').and(_.lte('20200510')) // 大于等于 20200501 小于等于 20200510
+}).get()
+// 结果排序
+var data = articles.orderBy('date', 'desc').get() // 按日期降序排序
+// 清理过期数据
+articles.where({
+  _timeout: _.lt(Date.now()) // 过期时间早于当前的
 }).remove()
-console.log('删除 xxx 大于 50 的记录', collection.get())
-```
-
-例程二：设置过期时间
-```javascript
-localDB.init()
-// 添加测试数据
-var collection = localDB.createCollection('article')
-for (var i = 0; i < 100; i++)
-  collection.add({
-    content: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    _timeout: Date.now() + i * 1000 // 设置过期时间
-  })
-// 模拟定期清理
-setTimeout(() => {
-  localDB.collection('article').where({
-    _timeout: _.exists(true).and(_.lt(Date.now())) // 清除所有超时时间小于当前的记录
-  }).remove()
-}, 5000)
 ```
 
 ## api ##
@@ -72,23 +56,24 @@ setTimeout(() => {
 | 名称 | 输入值 | 返回值 | 功能 |
 |:---:|:---:|:---:|:---:|
 | init | / | / | 初始化数据库 |
+| collection | name | Collection | 获取名称为 name 的集合 |
 | createCollection | name | Collection | 创建一个名称为 name 的集合 |
 | removeCollection | name | / | 移除名称为 name 的集合 |
-| collection | name | Collection | 获取名称为 name 的集合 |
 
 ### collection ###
 
 | 名称 | 输入值 | 返回值 | 功能 |
 |:---:|:---:|:---:|:---:|
 | add | data | id | 向集合中添加一条数据 |
+| count | / | number | 统计匹配查询条件的记录的条数 |
 | doc | id | document | 获取一条记录 |
-| where | query | collection | 进行条件查询 |
-| limit | num | collection | 指定查询结果集数量上限 |
-| skip | num | collection | 指定查询返回结果时从指定序列后的结果开始返回 |
-| orderBy | field, order | collection | 指定查询排序条件 |
 | get | / | array | 获取集合数据 |
-| update | val | / | 更新多条数据 |
+| limit | number | collection | 指定查询结果集数量上限 |
+| orderBy | field, order | collection | 指定查询排序条件 |
 | remove | / | / | 删除多条数据 |
+| skip | number | collection | 指定查询返回结果时从指定序列后的结果开始返回 |
+| update | newVal | / | 更新多条数据 |
+| where | query | collection | 进行条件查询 |
 
 附：`limit` 和 `skip` 仅对 `get` 有效
 
@@ -97,8 +82,8 @@ setTimeout(() => {
 | 名称 | 输入值 | 返回值 | 功能 |
 |:---:|:---:|:---:|:---:|
 | get | / | data | 获取记录数据 |
-| update | data | / | 更新记录数据 |
 | remove | / | / | 删除该记录 |
+| update | newVal | / | 更新记录数据 |
 
 ### command ###
 
