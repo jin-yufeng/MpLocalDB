@@ -3,7 +3,7 @@
 > 微信小程序本地数据库
 
 ## 使用方法 ##
-1. 复制 `localDB.js`（`6.98KB`，`min` 版本 `4.09KB`）到 `utils` 目录下
+1. 复制 `localDB.js`（`7.88KB`，`min` 版本 `4.68KB`）到 `utils` 目录下
 2. 在需要使用的页面的 `js` 文件中添加  
 
    ```javascript
@@ -127,3 +127,11 @@ _.eq(0).or(_.eq(100)) // 等于 0 或等于 100
 4. 所有操作 **不可撤销和恢复**，尤其是 `remove` 方法需谨慎调用  
 5. 集合名和一个集合内的 `_id`（可自动生成）**不可重复**，否则将无法创建  
 6. 方法设置参考了云数据库的操作，关于各方法的详细信息可以直接参考 [云数据库的文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-sdk-api/Cloud.database.html)  
+
+## 更新日志 ##
+- 2020.5.13
+  1. `U` 支持多字段排序（设置多个 `orderBy`）  
+  2. `U` 同时设置 `orderBy` 和 `skip`、`limit` 时将先进行排序再执行 `skip` 和 `limit`
+
+- 2020.5.9  
+  1. `A` 添加了 `count` 方法

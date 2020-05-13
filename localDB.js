@@ -1,7 +1,8 @@
 /**
  * 小程序本地数据库
- * github：https://github.com/jin-yufeng/MpLocalDB
- * author：JinYufeng
+ * @tutorial https://github.com/jin-yufeng/MpLocalDB
+ * @author JinYufeng
+ * @listens MIT
  */
 var localDB, _dirty = false
 // 异步写回本地缓存
@@ -36,9 +37,12 @@ function _randomId() {
 }
 
 // 集合
-function Collection(data, _super) {
+function Collection(data, root, options) {
   this.data = data
-  this._super = _super || data
+  this.options = options || {
+    orderBy: []
+  }
+  this.root = root || data
 }
 /**
  * 添加一条记录
@@ -97,35 +101,41 @@ Collection.prototype.where = function (obj) {
     if (matched)
       res[key] = this.data[key]
   }
-  return new Collection(res, this._super)
+  return new Collection(res, this.root, this.options)
 }
 /**
  * 指定查询结果集数量上限
  * @param {Number} limit 数量上限
- * @returns {Collection} 返回集合本身
+ * @returns {Collection} 返回设置后的集合
  */
 Collection.prototype.limit = function (limit) {
-  this._limit = limit
-  return this
+  var options = JSON.parse(JSON.stringify(this.options))
+  options.limit = limit
+  return new Collection(this.data, this.root, options)
 }
 /**
  * 指定查询返回结果时从指定序列后的结果开始返回
  * @param {Number} skip 开始返回的位置
- * @returns {Collection} 返回集合本身
+ * @returns {Collection} 返回设置后的集合
  */
 Collection.prototype.skip = function (skip) {
-  this._skip = skip
-  return this
+  var options = JSON.parse(JSON.stringify(this.options))
+  options.skip = skip
+  return new Collection(this.data, this.root, options)
 }
 /**
  * 指定查询排序条件
  * @param {String} field 排序字段
  * @param {('asc'|'desc')} order 升序或降序
+ * @returns {Collection} 返回设置后的集合
  */
-Collection.prototype.orderBy = function (field, order) {
-  this._field = field
-  this._order = order || 'asc'
-  return this
+Collection.prototype.orderBy = function (field, order = 'asc') {
+  var options = JSON.parse(JSON.stringify(this.options))
+  options.orderBy.push({
+    field,
+    order
+  })
+  return new Collection(this.data, this.root, options)
 }
 /**
  * 统计匹配查询条件的记录的条数
@@ -133,8 +143,8 @@ Collection.prototype.orderBy = function (field, order) {
  */
 Collection.prototype.count = function () {
   var count = 0
-  for(var key in this.data)
-    if(this.data[key]) count++
+  for (var key in this.data)
+    if (this.data[key]) count++
   return count
 }
 /**
@@ -143,26 +153,41 @@ Collection.prototype.count = function () {
  */
 Collection.prototype.get = function () {
   var res = [],
-    i = 0
-  for (var key in this.data) {
-    if (!this._skip || i >= this._skip) {
+    add = key => {
       var item = this.data[key]
       if (item) {
         item = JSON.parse(JSON.stringify(item))
         item._id = key
         res.push(item)
       }
-      if (i + 1 - (this._skip || 0) == this._limit) break
     }
-    i++
-  }
-  if (this._field)
+  if (this.options.orderBy.length) {
+    for (let key in this.data)
+      add(key)
     res.sort((a, b) => {
-      if (this._order == 'desc')
-        return b[this._field] - a[this._field]
-      else
-        return a[this._field] - b[this._field]
+      for (var i = 0, item; (item = this.options.orderBy[i]); i++) {
+        if (a[item.field] == b[item.field]) continue
+        if (item.order == 'desc')
+          return b[item.field] - a[item.field]
+        else
+          return a[item.field] - b[item.field]
+      }
+      return 0
     })
+    if (this.options.skip)
+      res = res.slice(this.options.skip)
+    if (this.options.limit)
+      res = res.slice(0, this.options.limit)
+  } else {
+    var i
+    for (let key in this.data) {
+      if (!this.options.skip || i >= this.options.skip) {
+        add(key)
+        if (i + 1 - (this.options.skip || 0) == this.options.limit) break
+      }
+      i++
+    }
+  }
   return res
 }
 /**
@@ -181,7 +206,7 @@ Collection.prototype.update = function (newVal) {
  */
 Collection.prototype.remove = function () {
   for (var key in this.data)
-    this._super[key] = void 0
+    this.root[key] = void 0
   _writeBack()
 }
 
