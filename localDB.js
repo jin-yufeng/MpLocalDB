@@ -6,7 +6,7 @@
  */
 var localDB, _dirty = false
 // 异步写回本地缓存
-function _writeBack() {
+function _write() {
   _dirty = true
   setTimeout(() => {
     if (_dirty) {
@@ -20,20 +20,8 @@ function _writeBack() {
 }
 // 更新记录
 function _update(item, update) {
-  for (var key in update) {
-    if (typeof update[key] == "function")
-      item[key] = update[key](item[key])
-    else
-      item[key] = update[key]
-  }
-}
-// 随机 id
-function _randomId() {
-  var map = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  var res = ''
-  for (var i = 0; i < 4; i++)
-    res += map[parseInt(Math.random() * 62)]
-  return res
+  for (var key in update)
+    item[key] = typeof update[key] == "function" ? update[key](item[key]) : update[key]
 }
 
 // 集合
@@ -50,13 +38,17 @@ function Collection(data, root, options) {
  * @returns {String} 创建成功返回记录的 id，否则返回 null
  */
 Collection.prototype.add = function (data) {
-  var id = data._id
+  var id = data._id || ''
   if (typeof data != 'object' || this.data[id]) return null
   data = JSON.parse(JSON.stringify(data))
   data._id = void 0
-  while (!id || this.data[id]) id = _randomId()
+  while (!id || this.data[id]) {
+    var map = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    for (var i = 0; i < 4; i++)
+      id += map[parseInt(Math.random() * 62)]
+  }
   this.data[id] = data
-  _writeBack()
+  _write()
   return id
 }
 /**
@@ -75,7 +67,7 @@ Collection.prototype.doc = function (id) {
     update: (newVal) => {
       if (typeof newVal != 'object') return false
       _update(data, newVal)
-      _writeBack()
+      _write()
       return true
     },
     remove: () => (this.data[id] = void 0, true)
@@ -87,18 +79,27 @@ Collection.prototype.doc = function (id) {
  * @returns 返回找到的集合
  */
 Collection.prototype.where = function (obj) {
+  const query = (obj, key) => {
+    for (var item in obj) {
+      var val = item == '_id' ? key : this.data[key][item]
+      if (obj[item] instanceof Command || obj[item] instanceof RegExp) {
+        if (!obj[item].exec(val))
+          return false
+      } else if (obj[item] != val)
+        return false
+    }
+    return true
+  }
   var res = {}
   for (var key in this.data) {
-    var matched = true
-    for (var query in obj) {
-      var queryVal = query == '_id' ? key : this.data[key][query]
-      if (typeof obj[query] == 'object' && (obj[query] instanceof Command || obj[query] instanceof RegExp)) {
-        if (!obj[query].exec(queryVal))
-          matched = false
-      } else if (obj[query] != queryVal)
-        matched = false
-    }
-    if (matched)
+    if (obj.type == 'or') {
+      for (var i = 0; i < obj.arr.length; i++) {
+        if (query(obj.arr[i], key)) {
+          res[key] = this.data[key]
+          break
+        }
+      }
+    } else if (query(obj, key))
       res[key] = this.data[key]
   }
   return new Collection(res, this.root, this.options)
@@ -165,19 +166,14 @@ Collection.prototype.get = function () {
     for (let key in this.data)
       add(key)
     res.sort((a, b) => {
-      for (var i = 0, item; (item = this.options.orderBy[i]); i++) {
-        if (a[item.field] == b[item.field]) continue
-        if (item.order == 'desc')
-          return b[item.field] - a[item.field]
-        else
-          return a[item.field] - b[item.field]
-      }
+      for (var i = 0, item;
+        (item = this.options.orderBy[i]); i++)
+        if (a[item.field] != b[item.field])
+          return (item.order == 'desc' ? -1 : 1) * (a[item.field] - b[item.field])
       return 0
     })
-    if (this.options.skip)
-      res = res.slice(this.options.skip)
-    if (this.options.limit)
-      res = res.slice(0, this.options.limit)
+    if (this.options.skip) res = res.slice(this.options.skip)
+    if (this.options.limit) res = res.slice(0, this.options.limit)
   } else {
     var i
     for (let key in this.data) {
@@ -198,7 +194,7 @@ Collection.prototype.update = function (newVal) {
   if (typeof newVal != 'object') return false
   for (var key in this.data)
     _update(this.data[key], newVal)
-  _writeBack()
+  _write()
   return true
 }
 /**
@@ -207,7 +203,7 @@ Collection.prototype.update = function (newVal) {
 Collection.prototype.remove = function () {
   for (var key in this.data)
     this.root[key] = void 0
-  _writeBack()
+  _write()
 }
 
 // 查询指令
@@ -248,7 +244,7 @@ module.exports = {
     if (!localDB) return console.warn('请先初始化'), false
     if (localDB[name]) return false
     localDB[name] = {}
-    _writeBack()
+    _write()
     return new Collection(localDB[name])
   },
   /**
@@ -258,7 +254,7 @@ module.exports = {
   removeCollection(name) {
     if (!localDB) return console.warn('请先初始化')
     localDB[name] = void 0
-    _writeBack()
+    _write()
   },
   /**
    * 获取一个集合对象
@@ -280,6 +276,10 @@ module.exports = {
     in: query => new Command(val => query.includes(val)),
     nin: query => new Command(val => !query.includes(val)),
     exists: query => new Command(val => val == void 0 ? !query : query),
+    or: (...arr) => ({
+      type: 'or',
+      arr: arr[0] instanceof Array ? arr[0] : arr
+    }),
     // 更新指令
     set: val => JSON.parse(JSON.stringify(val)),
     remove: () => void 0,

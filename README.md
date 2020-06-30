@@ -3,7 +3,7 @@
 > 微信小程序本地数据库
 
 ## 使用方法 ##
-1. 复制 `localDB.js`（`7.88KB`，`min` 版本 `4.68KB`）到 `utils` 目录下
+1. 复制 `localDB.js`（`7.93KB`，`min` 版本 `4.24KB`）到 `utils` 目录下
 2. 在需要使用的页面的 `js` 文件中添加  
 
    ```javascript
@@ -100,11 +100,22 @@ articles.where({
 | in | 字段值在给定数组中 |
 | nin | 字段值不在给定数组中 |
 | exists | 判断字段是否存在 |
+| or | 多字段或查询 |
 
-还可以通过 `or` 和 `and` 进行组合，如  
+单个字段的条件之间还可以通过 `or` 和 `and` 进行组合，如  
 ```javascript
 _.gt(30).and(_.lt(70)) // 大于 30 且小于 70
 _.eq(0).or(_.eq(100)) // 等于 0 或等于 100
+```
+
+`or` 指令用于多字段或查询（默认是与查询）  
+```javascript
+// 查询 collection 表中 a 字段为 1 或 b 字段为 2 的记录
+collection.where(_.or([{
+  a: 1
+}, {
+  b: 2
+}]))
 ```
 
 更新指令：
@@ -129,7 +140,10 @@ _.eq(0).or(_.eq(100)) // 等于 0 或等于 100
 6. 方法设置参考了云数据库的操作，关于各方法的详细信息可以直接参考 [云数据库的文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-sdk-api/Cloud.database.html)  
 
 ## 更新日志 ##
-- 2020.5.13
+- 2020.6.30  
+  1. `A` 增加 `or` 指令，可以实现多字段或查询  
+
+- 2020.5.13  
   1. `U` 支持多字段排序（设置多个 `orderBy`）  
   2. `U` 同时设置 `orderBy` 和 `skip`、`limit` 时将先进行排序再执行 `skip` 和 `limit`
 
