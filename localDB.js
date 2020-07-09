@@ -92,6 +92,7 @@ Collection.prototype.where = function (obj) {
   }
   var res = {}
   for (var key in this.data) {
+    if (!this.data[key]) continue
     if (obj.type == 'or') {
       for (var i = 0; i < obj.arr.length; i++) {
         if (query(obj.arr[i], key)) {

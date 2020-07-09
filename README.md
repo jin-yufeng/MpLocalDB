@@ -3,7 +3,7 @@
 > 微信小程序本地数据库
 
 ## 使用方法 ##
-1. 复制 `localDB.js`（`7.93KB`，`min` 版本 `4.24KB`）到 `utils` 目录下
+1. 复制 `localDB.js`（`7.97KB`，`min` 版本 `4.26KB`）到 `utils` 目录下
 2. 在需要使用的页面的 `js` 文件中添加  
 
    ```javascript
@@ -140,12 +140,15 @@ collection.where(_.or([{
 6. 方法设置参考了云数据库的操作，关于各方法的详细信息可以直接参考 [云数据库的文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-sdk-api/Cloud.database.html)  
 
 ## 更新日志 ##
+- 2020.7.9  
+  1. `F` 修复了 `remove` 后执行 `where` 可能出错的问题  
+
 - 2020.6.30  
   1. `A` 增加 `or` 指令，可以实现多字段或查询  
 
 - 2020.5.13  
   1. `U` 支持多字段排序（设置多个 `orderBy`）  
-  2. `U` 同时设置 `orderBy` 和 `skip`、`limit` 时将先进行排序再执行 `skip` 和 `limit`
+  2. `U` 同时设置 `orderBy` 和 `skip`、`limit` 时将先进行排序再执行 `skip` 和 `limit`  
 
 - 2020.5.9  
-  1. `A` 添加了 `count` 方法
+  1. `A` 添加了 `count` 方法  
